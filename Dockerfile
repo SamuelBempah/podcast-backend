@@ -1,13 +1,11 @@
 FROM node:18-buster-slim
 
-# Add buster-backports for FFmpeg with libmp3lame
-RUN echo "deb http://deb.debian.org/debian buster-backports main contrib non-free" > /etc/apt/sources.list.d/buster-backports.list
-
-# Install Python, pip, and FFmpeg
+# Install Python, pip, FFmpeg, and libmp3lame
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
-    ffmpeg/buster-backports \
+    ffmpeg \
+    libmp3lame0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip and install gTTS

@@ -3,8 +3,6 @@ const cors = require('cors');
 const { initializeApp } = require('firebase/app');
 const { getStorage, ref, getDownloadURL } = require('firebase/storage');
 const ffmpeg = require('fluent-ffmpeg');
-const ffmpegStatic = require('ffmpeg-static');
-const ffprobeStatic = require('ffprobe-static');
 const axios = require('axios');
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -25,9 +23,8 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const firebaseStorage = getStorage(firebaseApp);
 
-// Set FFmpeg paths
-ffmpeg.setFfmpegPath(ffmpegStatic);
-ffmpeg.setFfprobePath(ffprobeStatic.path);
+// Set FFmpeg path to system binary
+ffmpeg.setFfmpegPath('/usr/bin/ffmpeg');
 
 const app = express();
 app.use(cors());
@@ -77,7 +74,7 @@ tts.save('${ttsFile}')
           '[1:a]volume=0.4[a1]', // Reduce music volume to 40%
           '[0:a][a1]amix=inputs=2:duration=first:dropout_transition=2'
         ])
-        .audioCodec('mp3')
+        .audioCodec('libmp3lame')
         .outputOptions(['-metadata:s:a:0 title="Generated Podcast"'])
         .save(outputFile)
         .on('end', () => {
