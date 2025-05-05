@@ -72,10 +72,10 @@ tts.save('${ttsFile}')
         .inputOptions(['-stream_loop -1']) // Loop background music
         .complexFilter([
           '[1:a]volume=0.4[a1]', // Reduce music volume to 40%
-          '[0:a][a1]amix=inputs=2:duration=first:dropout_transition=2'
+          '[0:a][a1]amix=inputs=2:duration=first:dropout_transition=2[out]' // Label amix output as [out]
         ])
+        .outputOptions(['-map [out]', '-metadata:s:a:0 title="Generated Podcast"'])
         .audioCodec('libmp3lame')
-        .outputOptions(['-metadata:s:a:0 title="Generated Podcast"'])
         .save(outputFile)
         .on('end', () => {
           console.log('Audio processing completed');
