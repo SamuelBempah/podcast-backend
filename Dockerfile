@@ -1,19 +1,20 @@
 FROM node:18-buster-slim
 
-# Install Python, pip, and curl
+# Install Python, pip, curl, and tar
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     curl \
+    tar \
     && rm -rf /var/lib/apt/lists/*
 
-# Install FFmpeg with libmp3lame (static build for Fly.io)
-RUN curl -L https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n7.0-latest-linux64-gpl-7.0.tar.xz -o ffmpeg.tar.xz \
+# Install FFmpeg with libmp3lame (specific release for reliability)
+RUN curl -L https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2024-08-25-12-48/ffmpeg-n7.0-20240825-linux64-gpl-7.0.tar.xz -o ffmpeg.tar.xz \
     && tar -xf ffmpeg.tar.xz \
-    && mv ffmpeg-*-linux64-gpl-7.0/bin/ffmpeg /usr/bin/ffmpeg \
-    && mv ffmpeg-*-linux64-gpl-7.0/bin/ffprobe /usr/bin/ffprobe \
-    && rm -rf ffmpeg.tar.xz ffmpeg-*-linux64-gpl-7.0 \
-    && apt-get remove -y curl \
+    && mv ffmpeg-n7.0-20240825-linux64-gpl-7.0/bin/ffmpeg /usr/bin/ffmpeg \
+    && mv ffmpeg-n7.0-20240825-linux64-gpl-7.0/bin/ffprobe /usr/bin/ffprobe \
+    && rm -rf ffmpeg.tar.xz ffmpeg-n7.0-20240825-linux64-gpl-7.0 \
+    && apt-get remove -y curl tar \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
