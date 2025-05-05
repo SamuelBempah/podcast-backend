@@ -1,0 +1,25 @@
+app = "podcast-backend-fly"
+primary_region = "iad"
+
+[build]
+  builder = "docker"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+
+[env]
+  FIREBASE_API_KEY = "AIzaSyCcRES5X4RSjWcRGm5crwuSl6qUKx6aG6Y"
+  PORT = "8080"
+
+[mounts]
+  source = "podcast_data"
+  destination = "/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
