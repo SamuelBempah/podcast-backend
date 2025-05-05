@@ -1,11 +1,21 @@
 FROM node:18-slim
 
-# Install Python, pip, and FFmpeg
+# Install Python, pip, FFmpeg, and dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-dev \
+    python3-venv \
     python3-pip \
     ffmpeg \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Fix pip if broken
+RUN python3 -m ensurepip --upgrade \
+    && python3 -m pip install --no-cache-dir --upgrade pip
+
+# Install gTTS
+RUN python3 -m pip install --no-cache-dir gTTS
 
 # Set working directory
 WORKDIR /app
@@ -13,9 +23,6 @@ WORKDIR /app
 # Copy package.json and install Node.js dependencies
 COPY package.json .
 RUN npm install
-
-# Install Python dependencies
-RUN pip3 install gTTS --no-cache-dir
 
 # Copy application code
 COPY server.js .
