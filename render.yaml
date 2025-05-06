@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: podcast-backend
+    env: node
+    plan: free
+    buildCommand: |
+      apt-get update && apt-get install -y python3 python3-pip ffmpeg
+      pip3 install gTTS
+      npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.20.3
