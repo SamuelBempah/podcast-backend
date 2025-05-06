@@ -11,10 +11,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.9.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
+    "firebase": "^11.6.1",
     "fluent-ffmpeg": "^2.1.3"
   }
 }

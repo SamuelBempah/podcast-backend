@@ -1,3 +1,4 @@
+# Use a slim Node.js 18 image
 FROM node:18-buster-slim
 
 # Install Python, pip, FFmpeg, and libmp3lame
@@ -15,12 +16,14 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip \
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and install Node.js dependencies
-COPY package.json .
+# Copy package.json and package-lock.json (if available)
+COPY package*.json ./
+
+# Install Node.js dependencies
 RUN npm install
 
-# Copy application code
-COPY server.js .
+# Copy all application code
+COPY . .
 
 # Expose port
 EXPOSE 3001
