@@ -1,14 +1,15 @@
 const express = require('express');
 const cors = require('cors');
-const { initializeApp } = require('firebase/app');
-const { getStorage } = require('firebase/storage');
 const ffmpeg = require('fluent-ffmpeg');
-const { execSync } = require('child_process');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const axios = require('axios');
+const { initializeApp } = require('firebase/app');
+const { getStorage, ref, getDownloadURL } = require('firebase/storage');
 
-// Initialize Firebase (kept for consistency, though storage is unused)
+// Initialize Firebase
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
   authDomain: "leumas-decipher-softwares.firebaseapp.com",
@@ -20,10 +21,13 @@ const firebaseConfig = {
   measurementId: "G-0T6TTDN6K8"
 };
 const firebaseApp = initializeApp(firebaseConfig);
-getStorage(firebaseApp); // Initialize storage, though unused
+const firebaseStorage = getStorage(firebaseApp);
 
-// Set FFmpeg path to system binary
-ffmpeg.setFfmpegPath('/usr/bin/ffmpeg');
+// Set FFmpeg and FFprobe paths
+const ffmpegPath = require('ffmpeg-static');
+const ffprobePath = require('ffprobe-static').path;
+ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
 
 const app = express();
 app.use(cors());
@@ -37,27 +41,50 @@ app.post('/generate-tts', async (req, res) => {
 
   const tempDir = os.tmpdir();
   const ttsFile = path.join(tempDir, `tts-${Date.now()}.mp3`);
+  const musicFile = path.join(tempDir, `music-${Date.now()}.mp3`);
   const outputFile = path.join(tempDir, `output-${Date.now()}.mp3`);
 
   try {
     console.log('Generating text-to-speech with gTTS...');
-    // Use gTTS via Python script
-    const pythonScript = `
-from gtts import gTTS
-import sys
-text = sys.stdin.read()
-tts = gTTS(text=text, lang='en')
-tts.save('${ttsFile}')
-    `;
-    fs.writeFileSync(path.join(tempDir, 'tts.py'), pythonScript);
-    execSync(`echo "${text.replace(/"/g, '\\"')}" | python3 ${path.join(tempDir, 'tts.py')}`);
+    // Run generate_tts.py
+    await new Promise((resolve, reject) => {
+      const pythonProcess = spawn('python3', ['generate_tts.py', text, ttsFile]);
+      let errorData = '';
+      pythonProcess.stderr.on('data', (data) => {
+        errorData += data.toString();
+      });
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Python script failed: ${errorData}`));
+        }
+      });
+    });
 
-    // Process TTS audio with FFmpeg (no background music)
+    // Verify TTS file exists
+    if (!fs.existsSync(ttsFile)) {
+      throw new Error('TTS file was not created');
+    }
+
+    console.log('Downloading background music...');
+    const backgroundMusicRef = ref(firebaseStorage, 'background_music/track1.mp3');
+    const backgroundMusicUrl = await getDownloadURL(backgroundMusicRef);
+    const musicResponse = await axios.get(backgroundMusicUrl, { responseType: 'arraybuffer' });
+    fs.writeFileSync(musicFile, Buffer.from(musicResponse.data));
+
+    console.log('Processing audio with FFmpeg...');
     await new Promise((resolve, reject) => {
       ffmpeg()
         .input(ttsFile)
+        .input(musicFile)
+        .inputOptions(['-stream_loop -1']) // Loop background music
+        .complexFilter([
+          '[1:a]volume=0.4[a1]', // Reduce music volume to 40%
+          '[0:a][a1]amix=inputs=2:duration=first:dropout_transition=2[out]' // Mix TTS and music
+        ])
+        .outputOptions(['-map [out]', '-metadata:s:a:0 title="Generated Podcast"'])
         .audioCodec('libmp3lame')
-        .outputOptions(['-metadata:s:a:0 title="Generated Podcast"'])
         .save(outputFile)
         .on('end', () => {
           console.log('Audio processing completed');
@@ -81,13 +108,14 @@ tts.save('${ttsFile}')
     res.status(500).json({ error: `Failed to generate podcast: ${err.message}` });
   } finally {
     // Clean up temporary files
-    [ttsFile, outputFile, path.join(tempDir, 'tts.py')].forEach(file => {
+    [ttsFile, musicFile, outputFile].forEach(file => {
       if (file && fs.existsSync(file)) fs.unlinkSync(file);
     });
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+const PORT = process.env.PORT || 8080;
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
